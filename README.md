@@ -22,7 +22,7 @@ NexusDraw 是一个基于 Qt6/C++ 的桌面数据可视化工具。连接任意 
 
 ## 功能
 
-- 支持任意 OpenAI 兼容 API（OpenAI / DeepSeek / LongCat 等）
+- 支持任意 OpenAI 兼容 API（GPT, Deepseek 等）
 - Python（matplotlib/seaborn）和 R（ggplot2）双语言
 - 内置 12 种科学配色方案（Viridis / Plasma / Nature / BWR 等）
 - 图表交互：鼠标滚轮缩放、拖拽平移、双击新窗口打开
