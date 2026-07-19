@@ -24,7 +24,9 @@ void TerminalPanel::setupUI()
     headerBar->addWidget(m_headerLabel);
     headerBar->addStretch();
     m_clearBtn = new QPushButton(QString::fromUtf8("清空"));
-    m_clearBtn->setFixedSize(50, 22);
+    m_clearBtn->setMinimumWidth(44);
+    m_clearBtn->setMaximumHeight(22);
+    m_clearBtn->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Fixed);
     connect(m_clearBtn, &QPushButton::clicked, this, &TerminalPanel::clear);
     headerBar->addWidget(m_clearBtn);
     mainLayout->addLayout(headerBar);

@@ -83,8 +83,10 @@ QString CodeExecutor::wrapPythonCode(const QString& userCode, const QString& dat
     // Use escaped double quotes for safety with any path characters
     QString dp = dataPath;
     QString op = outputPath;
-    code += QString("DATASET_PATH = \"%1\"\n").arg(dp.replace("\\", "\\\\"));
-    code += QString("OUTPUT_PATH  = \"%1\"\n\n").arg(op.replace("\\", "\\\\"));
+    dp.replace("\\", "\\\\").replace("\"", "\\\"");
+    op.replace("\\", "\\\\").replace("\"", "\\\"");
+    code += QString("DATASET_PATH = \"%1\"\n").arg(dp);
+    code += QString("OUTPUT_PATH  = \"%1\"\n\n").arg(op);
 
     // Ensure output directory
     code += "os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)\n\n";
@@ -120,8 +122,10 @@ QString CodeExecutor::wrapRCode(const QString& userCode, const QString& dataPath
     // Pre-define paths as R variables (R uses forward slashes)
     QString dp = dataPath;
     QString op = outputPath;
-    code += QString("DATASET_PATH <- \"%1\"\n").arg(dp.replace("\\", "/"));
-    code += QString("OUTPUT_PATH  <- \"%1\"\n\n").arg(op.replace("\\", "/"));
+    dp.replace("\\", "/").replace("\"", "'");
+    op.replace("\\", "/").replace("\"", "'");
+    code += QString("DATASET_PATH <- \"%1\"\n").arg(dp);
+    code += QString("OUTPUT_PATH  <- \"%1\"\n\n").arg(op);
 
     code += QString("dir.create(dirname(OUTPUT_PATH), showWarnings=FALSE, recursive=TRUE)\n\n");
 

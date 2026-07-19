@@ -61,5 +61,4 @@ private:
     QNetworkReply* m_activeReply = nullptr;
     QString m_expectedLanguage;
     bool m_chatMode = false;
-    QString m_colorScheme;
 };

@@ -78,7 +78,6 @@ void AIManager::sendRequest(const QString& userMessage, const QJsonObject& datas
     }
 
     m_chatMode = chatMode;
-    m_colorScheme = datasetInfo["colorScheme"].toString();
     const AppConfig& cfg = AppConfig::instance();
 
     if (cfg.aiApiKey().isEmpty()) {

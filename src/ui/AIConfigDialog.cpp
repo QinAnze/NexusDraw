@@ -151,10 +151,8 @@ void AIConfigDialog::onTestConnection()
 
     if (cfg.aiApiKey().isEmpty())
         checks << QString::fromUtf8("! API Key 未设置");
-    else {
-        QString mk = cfg.aiApiKey().left(6) + "..." + cfg.aiApiKey().right(4);
-        checks << QString::fromUtf8("OK API Key: %1").arg(mk);
-    }
+    else
+        checks << QString::fromUtf8("OK API Key: ...%1").arg(cfg.aiApiKey().right(4));
     checks << QString::fromUtf8("OK Base URL: %1").arg(cfg.aiBaseURL());
     checks << QString::fromUtf8("OK 模型: %1").arg(cfg.aiModel());
 

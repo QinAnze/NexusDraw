@@ -22,9 +22,6 @@ public:
     void setTerminalVisible(bool visible);
     void runCommand(const QString& cmd);
 
-signals:
-    void commandExecuted(const QString& command);
-
 private slots:
     void onSendCommand();
 

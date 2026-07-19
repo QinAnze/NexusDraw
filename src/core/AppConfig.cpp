@@ -3,6 +3,30 @@
 #include <QCoreApplication>
 #include <QDir>
 #include <QFileInfo>
+#include <QFile>
+#include <QCryptographicHash>
+#include <QStandardPaths>
+#include <QSysInfo>
+
+// Simple XOR encrypt/decrypt with machine-specific key
+static QByteArray configKey() {
+    QByteArray seed = QSysInfo::machineUniqueId() + QByteArray("NexusDrawSalt");
+    return QCryptographicHash::hash(seed, QCryptographicHash::Sha256);
+}
+
+static QByteArray encryptConfig(const QString& plain) {
+    QByteArray key = configKey();
+    QByteArray data = plain.toUtf8();
+    for (int i = 0; i < data.size(); ++i) data[i] ^= key[i % key.size()];
+    return data.toBase64();
+}
+
+static QString decryptConfig(const QString& b64) {
+    QByteArray key = configKey();
+    QByteArray data = QByteArray::fromBase64(b64.toUtf8());
+    for (int i = 0; i < data.size(); ++i) data[i] ^= key[i % key.size()];
+    return QString::fromUtf8(data);
+}
 
 AppConfig& AppConfig::instance()
 {
@@ -11,10 +35,21 @@ AppConfig& AppConfig::instance()
 }
 
 AppConfig::AppConfig()
-    : m_settings("NexusDraw", "NexusDraw")
+    : m_settings(QSettings::IniFormat, QSettings::UserScope, "NexusDraw", "NexusDraw")
     , m_darkTheme(true)
     , m_preferredLang("python")
 {
+    // Migrate from old registry settings on first run
+    if (!QFile::exists(m_settings.fileName())) {
+        QSettings oldReg("NexusDraw", "NexusDraw");
+        if (oldReg.contains("ai/apiKey")) {
+            m_settings.setValue("ai/baseURL", oldReg.value("ai/baseURL").toString());
+            m_settings.setValue("ai/apiKey", encryptConfig(oldReg.value("ai/apiKey").toString()));
+            m_settings.setValue("ai/model", oldReg.value("ai/model").toString());
+            m_settings.setValue("exec/preferredLang", oldReg.value("exec/preferredLang").toString());
+            m_settings.sync();
+        }
+    }
     load();
 }
 
@@ -122,7 +157,7 @@ void AppConfig::setDarkTheme(bool dark) { m_darkTheme = dark; }
 void AppConfig::save()
 {
     m_settings.setValue("ai/baseURL", m_baseURL);
-    m_settings.setValue("ai/apiKey", m_apiKey);
+    m_settings.setValue("ai/apiKey", encryptConfig(m_apiKey));
     m_settings.setValue("ai/model", m_model);
     m_settings.setValue("exec/pythonPath", m_pythonPath);
     m_settings.setValue("exec/rPath", m_rPath);
@@ -134,7 +169,8 @@ void AppConfig::save()
 void AppConfig::load()
 {
     m_baseURL = m_settings.value("ai/baseURL", "https://api.openai.com").toString();
-    m_apiKey = m_settings.value("ai/apiKey", "").toString();
+    QString encryptedKey = m_settings.value("ai/apiKey", "").toString();
+    m_apiKey = encryptedKey.isEmpty() ? "" : decryptConfig(encryptedKey);
     m_model = m_settings.value("ai/model", "gpt-4o").toString();
     m_pythonPath = m_settings.value("exec/pythonPath", "").toString();
     m_rPath = m_settings.value("exec/rPath", "").toString();
