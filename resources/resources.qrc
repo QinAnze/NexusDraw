@@ -1,0 +1,36 @@
+<RCC>
+    <qresource prefix="/">
+        <file>logo.png</file>
+        <file>style.qss</file>
+        <file>icons/upload.svg</file>
+        <file>icons/settings.svg</file>
+        <file>icons/run.svg</file>
+        <file>icons/send.svg</file>
+        <file>icons/export.svg</file>
+        <file>icons/clear.svg</file>
+        <file>icons/copy.svg</file>
+        <file>icons/zoomin.svg</file>
+        <file>icons/zoomout.svg</file>
+        <file>icons/zoomfit.svg</file>
+        <file>icons/terminal.svg</file>
+        <file>icons/chat.svg</file>
+        <file>icons/data.svg</file>
+        <file>icons/code.svg</file>
+        <file>icons/plot.svg</file>
+        <file>skills/py.md</file>
+        <file>skills/r.md</file>
+        <file>skills/universal.md</file>
+        <file>skills/colors/bio.md</file>
+        <file>skills/colors/BWR.md</file>
+        <file>skills/colors/BWR2.md</file>
+        <file>skills/colors/cividis.md</file>
+        <file>skills/colors/finance.md</file>
+        <file>skills/colors/inferno.md</file>
+        <file>skills/colors/nature.md</file>
+        <file>skills/colors/okabe-ito.md</file>
+        <file>skills/colors/plasma.md</file>
+        <file>skills/colors/seaborn-deep.md</file>
+        <file>skills/colors/seaborn-muted.md</file>
+        <file>skills/colors/viridis.md</file>
+    </qresource>
+</RCC>

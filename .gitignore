@@ -1,0 +1,41 @@
+# Build output
+build/
+releases/
+
+# Portable environments (too large for git)
+portable_python/
+portable_r/
+python_env/
+
+# IDE / Editor
+.vs/
+.vscode/
+*.user
+*.pro.user*
+*.swp
+*.swo
+*~
+
+# Qt / MOC generated
+moc_*.cpp
+ui_*.h
+qrc_*.cpp
+*.autogen/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+*.cmake
+Makefile
+!CMakeLists.txt
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Temp
+*.tmp
+*.zip
+*.tar.gz
