@@ -49,11 +49,9 @@ NexusDraw 是一个基于 Qt6/C++ 的桌面数据可视化工具。连接任意 
 
 ## 快速开始
 
-1. 下载 `NexusDraw-portable-win64.zip`
-2. 解压到任意目录
-3. 双击 `NexusDraw.exe`
-4. 配置 API：`设置 → AI 配置` 填入 Base URL / API Key / Model
-5. 上传数据，选择语言和配色，开始绘图
+1. 下载Releases的安装程序
+2. 配置 API：`设置 → AI 配置` 填入 Base URL / API Key / Model
+3. 上传数据，选择语言和配色，开始绘图
 
 ## 项目结构
 
