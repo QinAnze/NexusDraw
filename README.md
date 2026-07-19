@@ -70,7 +70,7 @@ NexusDraw 是一个基于 Qt6/C++ 的桌面数据可视化工具。连接任意 
 
 ## 构建
 
-注意：Python与R的环境未上传，需手动配置。
+注意：Python与R的library未上传，需手动安装配置。
 
 ```bash
 cmake -B build -DCMAKE_PREFIX_PATH=<Qt6路径> -G "MinGW Makefiles"
