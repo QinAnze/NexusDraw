@@ -2,9 +2,9 @@
 build/
 releases/
 
-# Portable environments (too large for git)
-portable_python/
-portable_r/
+# Portable environments — only ignore large library dirs
+portable_python/Lib/
+portable_r/library/
 python_env/
 
 # IDE / Editor
