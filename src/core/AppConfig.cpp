@@ -223,45 +223,40 @@ QString AppConfig::buildSystemPrompt(const QJsonObject& datasetInfo, const QStri
     }
 
     QString prompt;
-    prompt += "## Workflow\n";
-    prompt += "1. Analyze the dataset columns, types, and sample data below.\n";
-    prompt += "2. Determine what type of plot the user is requesting.\n";
-    prompt += "3. Identify the research domain (biology/physics/medicine/finance/engineering/social-science).\n";
-    prompt += "4. Apply the domain-specific standards from the skill reference below.\n";
-    prompt += "5. Generate the code.\n\n";
     prompt += universalSkill;
-    prompt += "\n\n";
+    prompt += "\n";
     prompt += langSkill;
-    prompt += "\n\n";
+    prompt += "\n";
 
-    // Color scheme — all palettes standardized to hex codes
-    QMap<QString, QStringList> palettes;
-    palettes["viridis"]    = {"#440154","#482878","#3E4989","#31688E","#26828E","#1F9E89","#35B779","#6ECE58","#B5DE2B","#FDE725"};
-    palettes["plasma"]     = {"#0D0887","#46039F","#7201A8","#9C179E","#BD3786","#D8576B","#ED7953","#FB9F3A","#FDCA26","#F0F921"};
-    palettes["inferno"]    = {"#000004","#1B0C41","#4A0C6B","#781C6D","#A52C60","#CF4446","#ED6925","#FB9B06","#F7D13D","#FCFFA4"};
-    palettes["magma"]      = {"#000004","#180F3D","#440F76","#721F81","#9E2F7F","#CD4071","#F1605D","#FD9567","#FECA8D","#FCFDBF"};
-    palettes["cividis"]    = {"#00224E","#123570","#3B496C","#575D6D","#707173","#8A8678","#A59C74","#C3B369","#E1CC55","#FFE838"};
-    palettes["deep"]       = {"#4C72B0","#DD8452","#55A868","#C44E52","#8172B3","#937860","#DA8BC3","#8C8C8C","#CCB974","#64B5CD"};
-    palettes["muted"]      = {"#4878D0","#EE854A","#6ACC64","#D65F5F","#956CB4","#8C613C","#DC7EC0","#797979","#D5BB67","#82C6E2"};
-    palettes["colorblind"] = {"#0173B2","#DE8F05","#029E73","#D55E00","#CC78BC","#CA9161","#FBAFE4","#949494","#ECE133","#56B4E9"};
-    palettes["bright"]     = {"#023EFF","#FF7C00","#1AC938","#E8000B","#8B2BE2","#9F4800","#F14CC1","#A3A3A3","#FFC400","#00D7FF"};
-    palettes["dark"]       = {"#001C7F","#B1400D","#12711C","#8C0800","#591E71","#592F0D","#A23582","#3C3C3C","#B8850A","#006374"};
-    palettes["Set1"]       = {"#E41A1C","#377EB8","#4DAF4A","#984EA3","#FF7F00","#FFFF33","#A65628","#F781BF","#999999"};
-    palettes["Set2"]       = {"#66C2A5","#FC8D62","#8DA0CB","#E78AC3","#A6D854","#FFD92F","#E5C494","#B3B3B3"};
-    palettes["Set3"]       = {"#8DD3C7","#FFFFB3","#BEBADA","#FB8072","#80B1D3","#FDB462","#B3DE69","#FCCDE5","#D9D9D9","#BC80BD","#CCEBC5","#FFED6F"};
-    palettes["ggplot2"]    = {"#F8766D","#7CAE00","#00BFC4","#C77CFF"};  // ggplot2 default
-    palettes["okabe-ito"]  = {"#000000","#E69F00","#56B4E9","#009E73","#F0E442","#0072B2","#D55E00","#CC79A7"};
-    palettes["nature"]     = {"#2D6A4F","#40916C","#52B788","#74C69D","#95D5B2","#B7E4C7","#D8F3DC","#081C15","#1B4332"};
-    palettes["bio"]        = {"#1B9E77","#D95F02","#7570B3","#E7298A","#66A61E","#E6AB02","#A6761D","#666666"};
-    palettes["finance"]    = {"#003F5C","#2F4B7C","#665191","#A05195","#D45087","#F95D6A","#FF7C43","#FFA600"};
-    palettes["BWR"]        = {"#053061","#2166AC","#4393C3","#92C5DE","#D1E5F0","#F7F7F7","#FDDBC7","#F4A582","#D6604D","#B2182B","#67001F"};
-    palettes["BWR2"]       = {"#0000FF","#4444FF","#8888FF","#CCCCFF","#FFFFFF","#FFCCCC","#FF8888","#FF4444","#FF0000"};
-    // Flowchart-specific palettes (more distinct, suitable for node coloring)
-    palettes["flow-1"]     = {"#3498db","#e74c3c","#2ecc71","#f39c12","#9b59b6","#1abc9c","#e67e22","#34495e"};
-    palettes["flow-2"]     = {"#2c3e50","#c0392b","#27ae60","#f1c40f","#8e44ad","#16a085","#d35400","#2980b9"};
-    palettes["flow-3"]     = {"#1B9E77","#D95F02","#7570B3","#E7298A","#66A61E","#E6AB02","#A6761D","#666666"};
-    palettes["flow-4"]     = {"#4C72B0","#DD8452","#55A868","#C44E52","#8172B3","#937860","#DA8BC3","#8C8C8C"};
-    palettes["flow-5"]     = {"#FF6B6B","#4ECDC4","#45B7D1","#96CEB4","#FFEAA7","#DDA0DD","#98D8C8","#F7DC6F"};
+    // Static color palettes — built once
+    static QMap<QString, QStringList> palettes;
+    if (palettes.isEmpty()) {
+        palettes["viridis"]    = {"#440154","#482878","#3E4989","#31688E","#26828E","#1F9E89","#35B779","#6ECE58","#B5DE2B","#FDE725"};
+        palettes["plasma"]     = {"#0D0887","#46039F","#7201A8","#9C179E","#BD3786","#D8576B","#ED7953","#FB9F3A","#FDCA26","#F0F921"};
+        palettes["inferno"]    = {"#000004","#1B0C41","#4A0C6B","#781C6D","#A52C60","#CF4446","#ED6925","#FB9B06","#F7D13D","#FCFFA4"};
+        palettes["magma"]      = {"#000004","#180F3D","#440F76","#721F81","#9E2F7F","#CD4071","#F1605D","#FD9567","#FECA8D","#FCFDBF"};
+        palettes["cividis"]    = {"#00224E","#123570","#3B496C","#575D6D","#707173","#8A8678","#A59C74","#C3B369","#E1CC55","#FFE838"};
+        palettes["deep"]       = {"#4C72B0","#DD8452","#55A868","#C44E52","#8172B3","#937860","#DA8BC3","#8C8C8C","#CCB974","#64B5CD"};
+        palettes["muted"]      = {"#4878D0","#EE854A","#6ACC64","#D65F5F","#956CB4","#8C613C","#DC7EC0","#797979","#D5BB67","#82C6E2"};
+        palettes["colorblind"] = {"#0173B2","#DE8F05","#029E73","#D55E00","#CC78BC","#CA9161","#FBAFE4","#949494","#ECE133","#56B4E9"};
+        palettes["bright"]     = {"#023EFF","#FF7C00","#1AC938","#E8000B","#8B2BE2","#9F4800","#F14CC1","#A3A3A3","#FFC400","#00D7FF"};
+        palettes["dark"]       = {"#001C7F","#B1400D","#12711C","#8C0800","#591E71","#592F0D","#A23582","#3C3C3C","#B8850A","#006374"};
+        palettes["Set1"]       = {"#E41A1C","#377EB8","#4DAF4A","#984EA3","#FF7F00","#FFFF33","#A65628","#F781BF","#999999"};
+        palettes["Set2"]       = {"#66C2A5","#FC8D62","#8DA0CB","#E78AC3","#A6D854","#FFD92F","#E5C494","#B3B3B3"};
+        palettes["Set3"]       = {"#8DD3C7","#FFFFB3","#BEBADA","#FB8072","#80B1D3","#FDB462","#B3DE69","#FCCDE5","#D9D9D9","#BC80BD","#CCEBC5","#FFED6F"};
+        palettes["ggplot2"]    = {"#F8766D","#7CAE00","#00BFC4","#C77CFF"};
+        palettes["okabe-ito"]  = {"#000000","#E69F00","#56B4E9","#009E73","#F0E442","#0072B2","#D55E00","#CC79A7"};
+        palettes["nature"]     = {"#2D6A4F","#40916C","#52B788","#74C69D","#95D5B2","#B7E4C7","#D8F3DC","#081C15","#1B4332"};
+        palettes["bio"]        = {"#1B9E77","#D95F02","#7570B3","#E7298A","#66A61E","#E6AB02","#A6761D","#666666"};
+        palettes["finance"]    = {"#003F5C","#2F4B7C","#665191","#A05195","#D45087","#F95D6A","#FF7C43","#FFA600"};
+        palettes["BWR"]        = {"#053061","#2166AC","#4393C3","#92C5DE","#D1E5F0","#F7F7F7","#FDDBC7","#F4A582","#D6604D","#B2182B","#67001F"};
+        palettes["BWR2"]       = {"#0000FF","#4444FF","#8888FF","#CCCCFF","#FFFFFF","#FFCCCC","#FF8888","#FF4444","#FF0000"};
+        palettes["flow-1"]     = {"#3498db","#e74c3c","#2ecc71","#f39c12","#9b59b6","#1abc9c","#e67e22","#34495e"};
+        palettes["flow-2"]     = {"#2c3e50","#c0392b","#27ae60","#f1c40f","#8e44ad","#16a085","#d35400","#2980b9"};
+        palettes["flow-3"]     = {"#1B9E77","#D95F02","#7570B3","#E7298A","#66A61E","#E6AB02","#A6761D","#666666"};
+        palettes["flow-4"]     = {"#4C72B0","#DD8452","#55A868","#C44E52","#8172B3","#937860","#DA8BC3","#8C8C8C"};
+        palettes["flow-5"]     = {"#FF6B6B","#4ECDC4","#45B7D1","#96CEB4","#FFEAA7","#DDA0DD","#98D8C8","#F7DC6F"};
+    }
 
     QString colorScheme = datasetInfo["colorScheme"].toString();
     if (colorScheme == "auto") {

@@ -35,6 +35,9 @@ Makefile
 Thumbs.db
 Desktop.ini
 
+# Project notes
+checkpoint-workflow.md
+
 # Temp
 *.tmp
 *.zip
