@@ -68,7 +68,7 @@ void CodeViewPanel::setupUI()
     mainLayout->setSpacing(4);
 
     auto* headerLayout = new QHBoxLayout;
-    m_titleLabel = new QLabel(QString::fromUtf8("生成的代码"));
+    m_titleLabel = new QLabel(QString::fromUtf8("代码"));
     m_titleLabel->setStyleSheet("font-size: 14px; font-weight: bold; padding: 8px 10px 0 10px; color: #1a1a1a;");
     headerLayout->addWidget(m_titleLabel);
 
@@ -104,6 +104,9 @@ void CodeViewPanel::setupUI()
     monoFont.setStyleHint(QFont::Monospace);
     m_codeEdit->setFont(monoFont);
     new CodeHighlighter(m_codeEdit->document());
+    connect(m_codeEdit, &QPlainTextEdit::textChanged, this, [this]() {
+        m_runBtn->setEnabled(!m_codeEdit->toPlainText().isEmpty());
+    });
 
     mainLayout->addWidget(m_codeEdit, 1);
 }
@@ -112,7 +115,12 @@ void CodeViewPanel::setCode(const QString& code, const QString& /*language*/)
 {
     m_codeEdit->setPlainText(code);
     m_runBtn->setEnabled(!code.isEmpty());
-    m_titleLabel->setText(QString::fromUtf8("生成的代码"));
+    m_titleLabel->setText(QString::fromUtf8("代码"));
+}
+
+void CodeViewPanel::setRunEnabled(bool enabled)
+{
+    m_runBtn->setEnabled(enabled && !m_codeEdit->toPlainText().isEmpty());
 }
 
 QString CodeViewPanel::code() const { return m_codeEdit->toPlainText(); }
@@ -121,16 +129,23 @@ void CodeViewPanel::clear()
 {
     m_codeEdit->clear();
     m_runBtn->setEnabled(false);
-    m_titleLabel->setText(QString::fromUtf8("生成的代码"));
-}
-
-void CodeViewPanel::setRunEnabled(bool enabled)
-{
-    m_runBtn->setEnabled(enabled && !m_codeEdit->toPlainText().isEmpty());
+    m_titleLabel->setText(QString::fromUtf8("代码"));
 }
 
 void CodeViewPanel::setStopEnabled(bool enabled)
 {
     m_stopBtn->setEnabled(enabled);
+}
+
+void CodeViewPanel::setEditorReadOnly(bool readOnly)
+{
+    m_codeEdit->setReadOnly(readOnly);
+    if (readOnly) {
+        m_codeEdit->setStyleSheet("QPlainTextEdit { background-color: #e8e8e8; color: #999; border: 2px solid #ccc; }");
+        m_codeEdit->setPlaceholderText(QString::fromUtf8("流程图模式 — 等待 AI 生成 SVG 代码..."));
+    } else {
+        m_codeEdit->setStyleSheet("");
+        m_codeEdit->setPlaceholderText("");
+    }
 }
 

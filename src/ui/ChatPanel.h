@@ -25,8 +25,8 @@ protected:
     bool eventFilter(QObject* obj, QEvent* event) override;
 
 signals:
-    void messageSent(const QString& message, bool isPlotMode, const QString& language, const QString& colorScheme);
-    void languageChanged(const QString& language);
+    void messageSent(const QString& message, const QString& mode, const QString& language, const QString& colorScheme);
+    void modeChanged(const QString& mode);
 
 private slots:
     void onSendClicked();

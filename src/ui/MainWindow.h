@@ -29,7 +29,7 @@ public:
 private slots:
     void onUploadDataset();
     void onAIConfig();
-    void onUserMessage(const QString& message, bool isPlotMode, const QString& language, const QString& colorScheme);
+    void onUserMessage(const QString& message, const QString& mode, const QString& language, const QString& colorScheme);
     void onCodeGenerated(const QString& code, const QString& language);
     void onRunCode();
     void onExecutionFinished(const QString& imagePath, const QString& stdOut);
@@ -79,5 +79,7 @@ private:
     // 状态
     QString m_currentLanguage;
     bool m_isPlotMode = true;
+    QString m_currentMode = "plot";
     int m_retryCount = 0;
+    bool m_codeFromAI = false;
 };

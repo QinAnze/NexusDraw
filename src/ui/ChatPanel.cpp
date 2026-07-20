@@ -26,11 +26,12 @@ void ChatPanel::setupUI()
     m_langCombo = new QComboBox;
     m_langCombo->addItem("Python", "python");
     m_langCombo->addItem("R", "r");
+    m_langCombo->addItem("SVG", "xml");
     m_langCombo->setMinimumWidth(72);
     m_langCombo->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     m_langCombo->setCurrentIndex(0);
     int langIdx = m_langCombo->findData(AppConfig::instance().preferredLanguage());
-    if (langIdx >= 0) m_langCombo->setCurrentIndex(langIdx);
+    if (langIdx >= 0 && langIdx < 2) m_langCombo->setCurrentIndex(langIdx);
     headerLayout->addWidget(m_langCombo);
 
     // Color scheme selector
@@ -62,10 +63,33 @@ void ChatPanel::setupUI()
 
     // Mode toggle
     m_modeCombo = new QComboBox;
-    m_modeCombo->addItem(QString::fromUtf8("绘图模式"), true);
-    m_modeCombo->addItem(QString::fromUtf8("对话模式"), false);
+    m_modeCombo->addItem(QString::fromUtf8("科学绘图"), "plot");
+    m_modeCombo->addItem(QString::fromUtf8("流程图"), "flowchart");
+    m_modeCombo->addItem(QString::fromUtf8("对话模式"), "chat");
     m_modeCombo->setMinimumWidth(85);
     m_modeCombo->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    // Auto-switch language when mode changes
+    QString prevLang = m_langCombo->currentData().toString();
+    connect(m_modeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this, prevLang]() mutable {
+        QString mode = m_modeCombo->currentData().toString();
+        if (mode == "flowchart") {
+            if (m_langCombo->currentData().toString() != "xml") {
+                prevLang = m_langCombo->currentData().toString();
+            }
+            m_langCombo->setCurrentIndex(m_langCombo->findData("xml"));
+            m_langCombo->setEnabled(false);
+        } else if (mode == "plot") {
+            m_langCombo->setEnabled(true);
+            if (m_langCombo->currentData().toString() == "xml") {
+                int idx = m_langCombo->findData(prevLang);
+                if (idx >= 0 && idx < 2) m_langCombo->setCurrentIndex(idx);
+                else m_langCombo->setCurrentIndex(0);
+            }
+        } else {
+            m_langCombo->setEnabled(false);
+        }
+        emit modeChanged(mode);
+    });
     headerLayout->addWidget(m_modeCombo);
     mainLayout->addLayout(headerLayout);
 
@@ -196,12 +220,10 @@ void ChatPanel::onSendClicked()
 {
     QString text = m_inputEdit->toPlainText().trimmed();
     if (text.isEmpty()) return;
-    bool isPlot = m_modeCombo->currentData().toBool();
-    QString lang = m_langCombo->currentData().toString();
+    QString mode = m_modeCombo->currentData().toString();
+    QString lang = (mode == "flowchart") ? "xml" : m_langCombo->currentData().toString();
     QString color = m_colorCombo->currentData().toString();
-    // Save language preference
-    AppConfig::instance().setPreferredLanguage(lang);
-    emit messageSent(text, isPlot, lang, color);
+    emit messageSent(text, mode, lang, color);
     addMessage(text, true);
     m_inputEdit->clear();
     m_inputEdit->setFocus();

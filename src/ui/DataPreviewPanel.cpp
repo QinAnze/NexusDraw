@@ -43,11 +43,28 @@ void DataPreviewPanel::setupUI()
     m_table->verticalHeader()->setVisible(true);
     m_table->setSortingEnabled(false);
     mainLayout->addWidget(m_table, 1);
+
+    m_markdownView = new QTextBrowser;
+    m_markdownView->setOpenExternalLinks(true);
+    m_markdownView->setStyleSheet("QTextBrowser { background: #fff; border: 2px solid #000; font-size: 13px; padding: 10px; }");
+    m_markdownView->setVisible(false);
+    mainLayout->addWidget(m_markdownView, 1);
 }
 
 void DataPreviewPanel::loadFromDataManager(const DataManager* manager)
 {
     if (!manager || !manager->isLoaded()) { clear(); return; }
+
+    if (manager->isMarkdown()) {
+        m_table->setVisible(false);
+        m_markdownView->setVisible(true);
+        m_markdownView->setMarkdown(manager->markdownContent());
+        m_infoLabel->setText(QString::fromUtf8("文件: %1 (Markdown)").arg(manager->fileName()));
+        return;
+    }
+
+    m_table->setVisible(true);
+    m_markdownView->setVisible(false);
 
     m_infoLabel->setText(QString::fromUtf8("文件: %1 | 行数: %2 | 列数: %3")
         .arg(manager->fileName()).arg(manager->rowCount()).arg(manager->columnCount()));
@@ -87,6 +104,8 @@ void DataPreviewPanel::clear()
     m_table->clear();
     m_table->setRowCount(0);
     m_table->setColumnCount(0);
+    m_table->setVisible(true);
+    m_markdownView->setVisible(false);
 }
 
 void DataPreviewPanel::applyDarkTheme()

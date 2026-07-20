@@ -50,6 +50,12 @@ public:
     /// Check if a dataset is currently loaded
     bool isLoaded() const;
 
+    /// Check if loaded file is Markdown
+    bool isMarkdown() const;
+
+    /// Get raw markdown content
+    QString markdownContent() const;
+
 signals:
     void dataLoaded(int rowCount, int columnCount);
     void loadError(const QString& error);
@@ -66,4 +72,6 @@ private:
     QStringList m_columnTypes;
     QVector<QVector<QVariant>> m_data;
     bool m_loaded = false;
+    bool m_isMarkdown = false;
+    QString m_markdownContent;
 };

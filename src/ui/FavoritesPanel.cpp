@@ -43,11 +43,12 @@ void FavoritesPanel::setupUI()
     m_list->setDragEnabled(false);
     m_list->setDragDropMode(QAbstractItemView::NoDragDrop);
     m_list->setIconSize(QSize(140, 105));
+    m_list->setGridSize(QSize(170, 140));
     m_list->setSpacing(6);
     m_list->setStyleSheet("QListWidget { background: #fff; border: 2px solid #000; outline: none; }"
-                          "QListWidget::item { padding: 4px; border: none; color: #000; }"
+                          "QListWidget::item { padding: 8px 8px 4px 8px; border: none; color: #000; }"
                           "QListWidget::item:selected { background: none; }"
-                          "QListWidget::indicator { border: 2px solid #000; background: #fff; width: 14px; height: 14px; }"
+                          "QListWidget::indicator { border: 2px solid #000; background: #fff; width: 14px; height: 14px; margin-left: 4px; }"
                           "QListWidget::indicator:checked { background: #000; }");
     mainLayout->addWidget(m_list, 1);
 
@@ -161,18 +162,24 @@ void FavoritesPanel::onExportSelected()
         QString base = QFileInfo(src).completeBaseName();
         QString dest = dir + "/" + base + "." + ext;
         if (ext == "svg") {
-            QPixmap px(src);
-            QByteArray pngData;
-            QBuffer buf(&pngData);
-            buf.open(QIODevice::WriteOnly);
-            px.save(&buf, "PNG"); buf.close();
-            QFile f(dest);
-            if (f.open(QIODevice::WriteOnly)) {
-                f.write(QString("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"%1\" height=\"%2\">"
-                    "<image width=\"%1\" height=\"%2\" href=\"data:image/png;base64,%3\"/></svg>")
-                    .arg(px.width()).arg(px.height())
-                    .arg(QString::fromLatin1(pngData.toBase64())).toUtf8());
-                f.close(); ++count;
+            if (src.endsWith(".svg", Qt::CaseInsensitive)) {
+                // Already vector SVG — copy directly
+                QFile::copy(src, dest);
+                if (QFile::exists(dest)) ++count;
+            } else {
+                QPixmap px(src);
+                QByteArray pngData;
+                QBuffer buf(&pngData);
+                buf.open(QIODevice::WriteOnly);
+                px.save(&buf, "PNG"); buf.close();
+                QFile f(dest);
+                if (f.open(QIODevice::WriteOnly)) {
+                    f.write(QString("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"%1\" height=\"%2\">"
+                        "<image width=\"%1\" height=\"%2\" href=\"data:image/png;base64,%3\"/></svg>")
+                        .arg(px.width()).arg(px.height())
+                        .arg(QString::fromLatin1(pngData.toBase64())).toUtf8());
+                    f.close(); ++count;
+                }
             }
         } else {
             QPixmap px(src);

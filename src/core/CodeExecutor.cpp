@@ -96,12 +96,11 @@ QString CodeExecutor::wrapPythonCode(const QString& userCode, const QString& dat
     code += userCode;
     code += "\n# === End user code ===\n\n";
 
-    // Verify
+    // Verify (non-fatal — just print info)
     code += QString("if os.path.exists(OUTPUT_PATH):\n");
     code += "    print('OUTPUT_IMAGE_CREATED: ' + OUTPUT_PATH)\n";
     code += "else:\n";
-    code += "    print('ERROR: No output image created. Check that savefig/ggsave was called with OUTPUT_PATH.')\n";
-    code += "    sys.exit(1)\n";
+    code += "    print('(no image output — this is fine for non-plotting code)')\n";
 
     return code;
 }
@@ -136,8 +135,7 @@ QString CodeExecutor::wrapRCode(const QString& userCode, const QString& dataPath
     code += QString("if (file.exists(OUTPUT_PATH)) {\n");
     code += "  cat('OUTPUT_IMAGE_CREATED: ', OUTPUT_PATH, '\\n')\n";
     code += "} else {\n";
-    code += "  cat('ERROR: No output image created.\\n')\n";
-    code += "  quit(status=1)\n";
+    code += "  cat('(no image output — this is fine for non-plotting code)\\n')\n";
     code += "}\n";
 
     return code;
@@ -176,6 +174,18 @@ void CodeExecutor::execute(const QString& code, const QString& language,
     // Delete old output image if it exists
     if (QFile::exists(outputImagePath)) {
         QFile::remove(outputImagePath);
+    }
+
+    // XML/SVG: save directly, no interpreter needed
+    if (language == "xml") {
+        QFile f(outputImagePath);
+        if (f.open(QIODevice::WriteOnly)) {
+            f.write(code.toUtf8());
+            f.close();
+        }
+        emit statusMessage(tr("SVG saved: %1").arg(outputImagePath));
+        emit executionFinished(outputImagePath, QString());
+        return;
     }
 
     QString wrappedCode;
@@ -325,18 +335,9 @@ void CodeExecutor::onProcessFinished(int exitCode, QProcess::ExitStatus exitStat
 
     if (exitStatus == QProcess::CrashExit) {
         emit executionError(tr("代码执行崩溃\n\nStderr:\n%1").arg(m_stderrBuffer), m_stderrBuffer);
-    } else if (exitCode != 0 || !imageCreated) {
-        QString errMsg;
-        if (!imageCreated) {
-            errMsg = tr("代码已运行但未生成图表。\n\n"
-                        "Stdout: %1\n\nStderr: %2\n\n"
-                        "提示: 请检查代码是否正确使用了 DATASET_PATH 和 OUTPUT_PATH 变量。")
-                .arg(m_stdoutBuffer.isEmpty() ? QString::fromUtf8("(空)") : m_stdoutBuffer,
-                     m_stderrBuffer.isEmpty() ? QString::fromUtf8("(空)") : m_stderrBuffer);
-        } else {
-            errMsg = tr("代码退出码 %1\n\nStderr:\n%2")
-                .arg(exitCode).arg(m_stderrBuffer);
-        }
+    } else if (exitCode != 0) {
+        QString errMsg = tr("代码退出码 %1\n\nStderr:\n%2")
+            .arg(exitCode).arg(m_stderrBuffer);
         emit executionError(errMsg, m_stderrBuffer);
     } else {
         emit statusMessage(tr("Plot generated successfully!"));

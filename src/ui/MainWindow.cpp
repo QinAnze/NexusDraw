@@ -169,6 +169,9 @@ void MainWindow::setupConnections()
 {
     // Chat -> AI
     connect(m_chatPanel, &ChatPanel::messageSent, this, &MainWindow::onUserMessage);
+    connect(m_chatPanel, &ChatPanel::modeChanged, this, [this](const QString& mode) {
+        m_codeViewPanel->setEditorReadOnly(mode == "flowchart");
+    });
     // AI -> Code or Chat
     connect(m_aiManager, &AIManager::codeGenerated, this, &MainWindow::onCodeGenerated);
     connect(m_aiManager, &AIManager::chatResponse, this, [this](const QString& text) {
@@ -181,9 +184,10 @@ void MainWindow::setupConnections()
     // Code View -> Run / Stop
     connect(m_codeViewPanel, &CodeViewPanel::runRequested, this, &MainWindow::onRunCode);
     connect(m_codeViewPanel, &CodeViewPanel::stopRequested, this, [this]() {
-        m_codeExecutor->cancel();
-        m_aiManager->cancelRequest();
+        if (m_codeExecutor->isRunning()) m_codeExecutor->cancel();
+        if (m_aiManager->isBusy()) m_aiManager->cancelRequest();
         m_retryCount = 0;
+        m_codeFromAI = false;
         m_codeViewPanel->setRunEnabled(true);
         m_codeViewPanel->setStopEnabled(false);
         setWorkflowEnabled(true);
@@ -250,9 +254,10 @@ void MainWindow::setWorkflowEnabled(bool enabled)
 void MainWindow::onUploadDataset()
 {
     QString filter = QString::fromUtf8(
-        "数据文件 (*.csv *.tsv *.txt *.dat);;"
+        "数据文件 (*.csv *.tsv *.txt *.dat *.md);;"
         "CSV 文件 (*.csv);;"
         "TSV 文件 (*.tsv);;"
+        "Markdown 文件 (*.md);;"
         "所有文件 (*.*)");
 
     QString path = QFileDialog::getOpenFileName(
@@ -284,58 +289,65 @@ void MainWindow::onAIConfig()
     }
 }
 
-void MainWindow::onUserMessage(const QString& message, bool isPlotMode, const QString& language, const QString& colorScheme)
+void MainWindow::onUserMessage(const QString& message, const QString& mode, const QString& language, const QString& colorScheme)
 {
-    m_isPlotMode = isPlotMode;
+    m_isPlotMode = (mode != "chat");
+    m_currentMode = mode;
     m_currentLanguage = language;
-    m_langIndicator->setText(isPlotMode ? language.toUpper() : "...");
+    m_langIndicator->setText(mode == "chat" ? "..." : language.toUpper());
 
-    if (isPlotMode && !m_dataManager->isLoaded()) {
-        m_chatPanel->addSystemMessage(
-            QString::fromUtf8("请先上传数据集再描述图表需求。"));
-        QMessageBox::information(this, QString::fromUtf8("无数据集"),
-            QString::fromUtf8("请先上传 CSV/TSV 数据集文件。"));
+    bool needsData = (mode == "plot" || mode == "flowchart");
+    if (needsData && !m_dataManager->isLoaded()) {
+        m_chatPanel->addSystemMessage(QString::fromUtf8("请先上传数据集。"));
+        QMessageBox::information(this, QString::fromUtf8("无数据集"), QString::fromUtf8("请先上传 CSV/TSV 数据集文件。"));
         return;
     }
 
     const AppConfig& cfg = AppConfig::instance();
     if (cfg.aiApiKey().isEmpty()) {
-        m_chatPanel->addSystemMessage(
-            QString::fromUtf8("请先配置 AI API Key（设置 -> AI 配置）。"));
+        m_chatPanel->addSystemMessage(QString::fromUtf8("请先配置 AI API Key（设置 -> AI 配置）。"));
         onAIConfig();
         if (cfg.aiApiKey().isEmpty()) return;
     }
 
     setWorkflowEnabled(false);
-    m_statusLabel->setText(
-        QString::fromUtf8("正在连接 AI: %1...").arg(cfg.aiModel()));
+    m_statusLabel->setText(QString::fromUtf8("正在连接 AI: %1...").arg(cfg.aiModel()));
 
-    if (isPlotMode) {
-        logToTerminal(QString::fromUtf8("绘图请求 -> %1 (%2) 配色:%3")
-            .arg(cfg.aiModel(), language, colorScheme.isEmpty() ? QString::fromUtf8("默认") : colorScheme));
-        QString outputPath = generateOutputPath();
-        QJsonObject datasetInfo = m_dataManager->buildDatasetInfo(outputPath);
-        datasetInfo["colorScheme"] = colorScheme;  // Pass to AIManager
-        m_aiManager->sendRequest(message, datasetInfo, language, false);
-    } else {
+    // Lock code editor during flowchart AI generation
+    if (mode == "flowchart") {
+        m_codeViewPanel->setEditorReadOnly(true);
+    }
+
+    if (mode == "chat") {
         logToTerminal(QString::fromUtf8("对话请求 -> %1").arg(cfg.aiModel()));
         QJsonObject emptyInfo;
         m_aiManager->sendRequest(message, emptyInfo, language, true);
+    } else {
+        QString typeLabel = (mode == "flowchart") ? QString::fromUtf8("流程图") : QString::fromUtf8("绘图");
+        logToTerminal(QString::fromUtf8("%1请求 -> %2 (%3) 配色:%4")
+            .arg(typeLabel, cfg.aiModel(), language, colorScheme.isEmpty() ? QString::fromUtf8("默认") : colorScheme));
+        QString outputPath = generateOutputPath();
+        if (mode == "flowchart") outputPath.replace(".png", ".svg");
+        QJsonObject datasetInfo = m_dataManager->buildDatasetInfo(outputPath);
+        datasetInfo["colorScheme"] = colorScheme;
+        datasetInfo["mode"] = mode;
+        m_aiManager->sendRequest(message, datasetInfo, language, false);
     }
 }
 
 void MainWindow::onCodeGenerated(const QString& code, const QString& language)
 {
+    m_codeFromAI = true;
+    m_codeViewPanel->setEditorReadOnly(false);  // Unlock after AI response
     m_currentLanguage = language;
     m_codeViewPanel->setCode(code, language);
     m_runAction->setEnabled(true);
-    m_statusLabel->setText(
-        QString::fromUtf8("代码已生成 — 按 F5 或点击运行按钮执行"));
+    m_statusLabel->setText(QString::fromUtf8("代码已生成, 自动运行中..."));
     logToTerminal(QString::fromUtf8("AI 返回 %1 代码 (%2 字符)")
         .arg(language).arg(code.length()));
     setWorkflowEnabled(true);
     if (m_isPlotMode) {
-        onRunCode();  // 自动运行
+        onRunCode();
     } else {
         m_chatPanel->addSystemMessage(QString::fromUtf8("AI 已回复（对话模式）。切换到绘图模式以执行代码。"));
     }
@@ -351,7 +363,7 @@ void MainWindow::onRunCode()
     }
 
     if (m_currentLanguage.isEmpty()) {
-        m_currentLanguage = AppConfig::instance().preferredLanguage();
+        m_currentLanguage = "python";
     }
 
     setWorkflowEnabled(false);
@@ -360,27 +372,36 @@ void MainWindow::onRunCode()
     m_runAction->setEnabled(false);
 
     QString outputPath = generateOutputPath();
+    if (m_currentMode == "flowchart" || m_currentLanguage == "xml") {
+        outputPath.replace(".png", ".svg");
+    }
+
     m_statusLabel->setText(
         QString::fromUtf8("正在执行 %1 代码...").arg(m_currentLanguage));
 
-    QString executedCode = code;
     QString dataPath = m_dataManager->isLoaded() ? m_dataManager->filePath() : "";
 
     logToTerminal(QString::fromUtf8("执行 %1 脚本 -> %2")
         .arg(m_currentLanguage, outputPath));
-    logToTerminal(QString::fromUtf8("  数据: %1").arg(dataPath));
-    m_codeExecutor->execute(executedCode, m_currentLanguage, dataPath, outputPath);
+    m_codeExecutor->execute(code, m_currentLanguage, dataPath, outputPath);
 }
 
-void MainWindow::onExecutionFinished(const QString& imagePath, const QString& /*stdOut*/)
+void MainWindow::onExecutionFinished(const QString& imagePath, const QString& stdOut)
 {
-    m_plotViewPanel->loadPlot(imagePath);
+    m_retryCount = 0;
     m_codeViewPanel->setRunEnabled(true);
     m_runAction->setEnabled(true);
     setWorkflowEnabled(true);
-    m_statusLabel->setText(QString::fromUtf8("图表生成成功！"));
-    logToTerminal(QString::fromUtf8("图表已生成: %1").arg(imagePath));
-    m_terminalPanel->appendSuccess(QString::fromUtf8("运行成功 — 图表已就绪"));
+
+    if (!stdOut.isEmpty()) logToTerminal(stdOut.trimmed());
+
+    if (QFile::exists(imagePath)) {
+        m_plotViewPanel->loadPlot(imagePath);
+        m_statusLabel->setText(QString::fromUtf8("图表生成成功"));
+        logToTerminal(QString::fromUtf8("图表: %1").arg(imagePath));
+    } else {
+        m_statusLabel->setText(QString::fromUtf8("运行完成"));
+    }
 }
 
 void MainWindow::onExecutionError(const QString& error, const QString& stdErr)
@@ -414,20 +435,28 @@ void MainWindow::onExecutionError(const QString& error, const QString& stdErr)
         return;
     }
 
-    // Code error — AI auto-fix up to 3 times
-    m_retryCount++;
-    if (m_retryCount <= 3) {
-        m_chatPanel->addSystemMessage(
-            QString::fromUtf8("代码报错，AI 正在修复 (第 %1/3 次)...").arg(m_retryCount));
-        m_statusLabel->setText(QString::fromUtf8("AI 修复中..."));
-        m_aiManager->fixCode(m_codeViewPanel->code(), combined, m_currentLanguage);
-    } else {
-        m_chatPanel->addSystemMessage(
-            QString::fromUtf8("AI 修复 3 次后仍失败，请手动修改代码。"));
-        m_codeViewPanel->setRunEnabled(true);
-        m_runAction->setEnabled(true);
-        m_retryCount = 0;
+    // AI auto-fix only for AI-generated code
+    if (m_codeFromAI) {
+        m_retryCount++;
+        if (m_retryCount <= 3) {
+            m_chatPanel->addSystemMessage(
+                QString::fromUtf8("代码报错，AI 正在修复 (第 %1/3 次)...").arg(m_retryCount));
+            m_statusLabel->setText(QString::fromUtf8("AI 修复中..."));
+            m_aiManager->fixCode(m_codeViewPanel->code(), combined, m_currentLanguage);
+        } else {
+            m_chatPanel->addSystemMessage(
+                QString::fromUtf8("AI 修复 3 次后仍失败，请手动修改代码。"));
+            m_codeViewPanel->setRunEnabled(true);
+            m_runAction->setEnabled(true);
+            m_retryCount = 0;
+        }
+        return;
     }
+
+    // Manual code: just show error in terminal
+    m_codeViewPanel->setRunEnabled(true);
+    m_runAction->setEnabled(true);
+    m_statusLabel->setText(QString::fromUtf8("运行出错，见终端"));
 }
 
 void MainWindow::onExportPlot(const QString& imagePath)

@@ -162,7 +162,6 @@ void AppConfig::save()
     m_settings.setValue("ai/model", m_model);
     m_settings.setValue("exec/pythonPath", m_pythonPath);
     m_settings.setValue("exec/rPath", m_rPath);
-    m_settings.setValue("exec/preferredLang", m_preferredLang);
     m_settings.setValue("ui/darkTheme", m_darkTheme);
     m_settings.sync();
 }
@@ -175,7 +174,6 @@ void AppConfig::load()
     m_model = m_settings.value("ai/model", "gpt-4o").toString();
     m_pythonPath = m_settings.value("exec/pythonPath", "").toString();
     m_rPath = m_settings.value("exec/rPath", "").toString();
-    m_preferredLang = m_settings.value("exec/preferredLang", "python").toString();
     m_darkTheme = m_settings.value("ui/darkTheme", true).toBool();
 }
 
@@ -208,8 +206,16 @@ QString AppConfig::buildSystemPrompt(const QJsonObject& datasetInfo, const QStri
     }
 
     // Load language-specific skill
+    bool isFlowchart = (datasetInfo["mode"].toString() == "flowchart");
+    QString effectiveLang = isFlowchart ? "xml" : language;
+
     QString langSkill;
-    QString skillPath = (language == "python") ? ":/skills/py.md" : ":/skills/r.md";
+    QString skillPath;
+    if (isFlowchart) {
+        skillPath = ":/skills/flowchart.md";
+    } else {
+        skillPath = (language == "python") ? ":/skills/py.md" : ":/skills/r.md";
+    }
     QFile langFile(skillPath);
     if (langFile.open(QFile::ReadOnly | QFile::Text)) {
         langSkill = QString::fromUtf8(langFile.readAll());
@@ -250,6 +256,12 @@ QString AppConfig::buildSystemPrompt(const QJsonObject& datasetInfo, const QStri
     palettes["finance"]    = {"#003F5C","#2F4B7C","#665191","#A05195","#D45087","#F95D6A","#FF7C43","#FFA600"};
     palettes["BWR"]        = {"#053061","#2166AC","#4393C3","#92C5DE","#D1E5F0","#F7F7F7","#FDDBC7","#F4A582","#D6604D","#B2182B","#67001F"};
     palettes["BWR2"]       = {"#0000FF","#4444FF","#8888FF","#CCCCFF","#FFFFFF","#FFCCCC","#FF8888","#FF4444","#FF0000"};
+    // Flowchart-specific palettes (more distinct, suitable for node coloring)
+    palettes["flow-1"]     = {"#3498db","#e74c3c","#2ecc71","#f39c12","#9b59b6","#1abc9c","#e67e22","#34495e"};
+    palettes["flow-2"]     = {"#2c3e50","#c0392b","#27ae60","#f1c40f","#8e44ad","#16a085","#d35400","#2980b9"};
+    palettes["flow-3"]     = {"#1B9E77","#D95F02","#7570B3","#E7298A","#66A61E","#E6AB02","#A6761D","#666666"};
+    palettes["flow-4"]     = {"#4C72B0","#DD8452","#55A868","#C44E52","#8172B3","#937860","#DA8BC3","#8C8C8C"};
+    palettes["flow-5"]     = {"#FF6B6B","#4ECDC4","#45B7D1","#96CEB4","#FFEAA7","#DDA0DD","#98D8C8","#F7DC6F"};
 
     QString colorScheme = datasetInfo["colorScheme"].toString();
     if (colorScheme == "auto") {
@@ -306,6 +318,13 @@ QString AppConfig::buildSystemPrompt(const QJsonObject& datasetInfo, const QStri
 
     // Technical: path variables + output format
     prompt += "## Code Requirements\n";
+    if (isFlowchart) {
+        prompt += "- Generate a complete SVG flowchart (standalone XML, no external dependencies).\n";
+        prompt += "- Use `<svg>` root with viewBox, `<rect>`, `<ellipse>`, `<line>`, `<text>` elements.\n";
+        prompt += "- Use DATASET_PATH to understand the data structure.\n";
+        prompt += "- Apply the color palette directly to SVG fill/stroke attributes.\n";
+        prompt += "Return ONLY the SVG code in a ```xml code block. No explanation.\n";
+    } else {
     prompt += "- Use DATASET_PATH (csv path) and OUTPUT_PATH (image path) as pre-defined variables.\n";
     if (language == "python") {
         prompt += "- Read: df = pd.read_csv(DATASET_PATH)\n";
@@ -318,6 +337,8 @@ QString AppConfig::buildSystemPrompt(const QJsonObject& datasetInfo, const QStri
         prompt += "- Save: ggsave(OUTPUT_PATH, width=10, height=6, dpi=300)\n";
         prompt += "```r\nlibrary(ggplot2)\ndf <- read.csv(DATASET_PATH)\n# ...\nggsave(OUTPUT_PATH, width=10, height=6, dpi=300)\n```\n";
     }
+    }  // end isFlowchart else
+
     prompt += "\nReturn ONLY the code block. No explanation.\n";
 
     return prompt;

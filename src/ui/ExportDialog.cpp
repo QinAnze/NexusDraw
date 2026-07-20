@@ -140,24 +140,30 @@ void ExportDialog::onExport()
 
     bool success = false;
     if (fmt == "svg") {
-        // Embed PNG as base64 in SVG wrapper
-        QByteArray pngData;
-        QBuffer buffer(&pngData);
-        buffer.open(QIODevice::WriteOnly);
-        toSave.save(&buffer, "PNG");
-        buffer.close();
-        QString b64 = QString::fromLatin1(pngData.toBase64());
-        QString svg = QString(
-            "<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" "
-            "width=\"%1\" height=\"%2\" viewBox=\"0 0 %1 %2\">\n"
-            "<image width=\"%1\" height=\"%2\" xlink:href=\"data:image/png;base64,%3\"/>\n"
-            "</svg>\n"
-        ).arg(toSave.width()).arg(toSave.height()).arg(b64);
-        QFile f(dest);
-        if (f.open(QIODevice::WriteOnly)) {
-            f.write(svg.toUtf8());
-            f.close();
-            success = true;
+        if (m_sourcePath.endsWith(".svg", Qt::CaseInsensitive)) {
+            // Source is vector SVG — copy directly
+            QFile::copy(m_sourcePath, dest);
+            success = QFile::exists(dest);
+        } else {
+            // Raster fallback: embed PNG in SVG wrapper
+            QByteArray pngData;
+            QBuffer buffer(&pngData);
+            buffer.open(QIODevice::WriteOnly);
+            toSave.save(&buffer, "PNG");
+            buffer.close();
+            QString b64 = QString::fromLatin1(pngData.toBase64());
+            QString svg = QString(
+                "<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" "
+                "width=\"%1\" height=\"%2\" viewBox=\"0 0 %1 %2\">\n"
+                "<image width=\"%1\" height=\"%2\" xlink:href=\"data:image/png;base64,%3\"/>\n"
+                "</svg>\n"
+            ).arg(toSave.width()).arg(toSave.height()).arg(b64);
+            QFile f(dest);
+            if (f.open(QIODevice::WriteOnly)) {
+                f.write(svg.toUtf8());
+                f.close();
+                success = true;
+            }
         }
     } else {
         int quality = (fmt == "jpg" || fmt == "jpeg") ? 95 : -1;

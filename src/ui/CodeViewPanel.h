@@ -27,6 +27,8 @@ public:
     /// Set whether run/stop buttons are enabled
     void setRunEnabled(bool enabled);
     void setStopEnabled(bool enabled);
+    /// Lock editor during AI generation
+    void setEditorReadOnly(bool readOnly);
 
 signals:
     void runRequested();

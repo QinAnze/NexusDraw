@@ -2,6 +2,7 @@
 
 #include <QWidget>
 #include <QTableWidget>
+#include <QTextBrowser>
 #include <QLabel>
 #include <QPushButton>
 
@@ -33,5 +34,6 @@ private:
     QLabel* m_titleLabel;
     QLabel* m_infoLabel;
     QTableWidget* m_table;
+    QTextBrowser* m_markdownView;
     QPushButton* m_uploadBtn;
 };

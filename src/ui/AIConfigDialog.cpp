@@ -55,12 +55,6 @@ void AIConfigDialog::setupUI()
     auto* execLayout = new QFormLayout(execGroup);
     execLayout->setSpacing(10);
 
-    m_languageCombo = new QComboBox;
-    m_languageCombo->addItem(QString::fromUtf8("Python (推荐)"), "python");
-    m_languageCombo->addItem("R", "r");
-    m_languageCombo->setMinimumHeight(30);
-    execLayout->addRow(QString::fromUtf8("默认语言:"), m_languageCombo);
-
     auto* pythonRow = new QHBoxLayout;
     m_pythonPathEdit = new QLineEdit;
     m_pythonPathEdit->setPlaceholderText("python (或完整路径)");
@@ -117,8 +111,6 @@ void AIConfigDialog::loadSettings()
     m_modelEdit->setText(cfg.aiModel());
     m_pythonPathEdit->setText(cfg.pythonPath() == "python" ? "" : cfg.pythonPath());
     m_rPathEdit->setText(cfg.rPath() == "Rscript" ? "" : cfg.rPath());
-    int idx = m_languageCombo->findData(cfg.preferredLanguage());
-    if (idx >= 0) m_languageCombo->setCurrentIndex(idx);
 }
 
 void AIConfigDialog::onSave()
@@ -137,7 +129,6 @@ void AIConfigDialog::onSave()
     cfg.setPythonPath(pyPath.isEmpty() ? "python" : pyPath);
     QString rPath = m_rPathEdit->text().trimmed();
     cfg.setRPath(rPath.isEmpty() ? "Rscript" : rPath);
-    cfg.setPreferredLanguage(m_languageCombo->currentData().toString());
     cfg.save();
     accept();
 }

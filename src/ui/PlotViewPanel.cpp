@@ -5,6 +5,8 @@
 #include <QMouseEvent>
 #include <QWheelEvent>
 #include <QApplication>
+#include <QSvgRenderer>
+#include <QPainter>
 
 // ---- ZoomGraphicsView ----
 ZoomGraphicsView::ZoomGraphicsView(QWidget* parent) : QGraphicsView(parent) {
@@ -75,6 +77,17 @@ void PlotViewPanel::loadPlot(const QString& imagePath) {
     if (!QFileInfo::exists(imagePath)) { clear(); emit plotLoaded(false); return; }
     m_imagePath = imagePath;
     m_originalPixmap = QPixmap(imagePath);
+    // SVG files need special handling
+    if (m_originalPixmap.isNull() && imagePath.endsWith(".svg", Qt::CaseInsensitive)) {
+        QSvgRenderer svg(imagePath);
+        if (svg.isValid()) {
+            m_originalPixmap = QPixmap(svg.defaultSize() * 2);
+            m_originalPixmap.fill(Qt::white);
+            QPainter p(&m_originalPixmap);
+            svg.render(&p);
+            p.end();
+        }
+    }
     if (m_originalPixmap.isNull()) { clear(); emit plotLoaded(false); return; }
     m_hasPlot = true;
     m_scene->clear();

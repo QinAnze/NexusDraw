@@ -70,14 +70,26 @@ int main(int argc, char* argv[])
     splashProgress->setTextVisible(false);
     splashProgress->setStyleSheet("QProgressBar { background: #e0e0e0; border: 2px solid #000; } QProgressBar::chunk { background: #000; }");
 
+    QLabel* splashStatus = new QLabel(QString::fromUtf8("正在启动..."), &splash);
+    splashStatus->setGeometry(80, 320, 600, 20);
+    splashStatus->setAlignment(Qt::AlignCenter);
+    splashStatus->setStyleSheet("font-size: 12px; color: #333; background: transparent;");
+
     splash.show();
     app.processEvents();
 
-    // Animate progress
-    for (int i = 0; i <= 100; i += 5) {
-        splashProgress->setValue(i);
+    QStringList steps = {
+        QString::fromUtf8("加载配置..."),
+        QString::fromUtf8("检测 Python 环境..."),
+        QString::fromUtf8("检测 R 环境..."),
+        QString::fromUtf8("初始化界面..."),
+        QString::fromUtf8("启动完成"),
+    };
+    for (int i = 0; i < steps.size(); ++i) {
+        splashStatus->setText(steps[i]);
+        splashProgress->setValue((i + 1) * 100 / steps.size());
         app.processEvents();
-        QThread::msleep(30);
+        QThread::msleep(200);
     }
 
     // Create and show main window

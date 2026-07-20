@@ -16,6 +16,9 @@ bool DataManager::isLoaded() const
     return m_loaded;
 }
 
+bool DataManager::isMarkdown() const { return m_isMarkdown; }
+QString DataManager::markdownContent() const { return m_markdownContent; }
+
 QString DataManager::filePath() const { return m_filePath; }
 QString DataManager::fileName() const { return QFileInfo(m_filePath).fileName(); }
 QStringList DataManager::columnNames() const { return m_headers; }
@@ -47,6 +50,17 @@ bool DataManager::loadFile(const QString& filePath)
     m_headers.clear();
     m_columnTypes.clear();
     m_data.clear();
+    m_isMarkdown = false;
+    m_markdownContent.clear();
+
+    // Handle Markdown files
+    if (filePath.endsWith(".md", Qt::CaseInsensitive)) {
+        m_markdownContent = QString::fromUtf8(file.readAll());
+        m_isMarkdown = true;
+        m_loaded = true;
+        emit dataLoaded(0, 0);
+        return true;
+    }
 
     QTextStream stream(&file);
     // Qt6 defaults to UTF-8, no setCodec needed

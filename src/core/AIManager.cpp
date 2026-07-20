@@ -221,10 +221,11 @@ void AIManager::onReplyFinished(QNetworkReply* reply)
     QString code = extractCodeBlock(content, m_expectedLanguage);
 
     if (code.isEmpty()) {
-        // If no code block found, maybe the entire response is code
-        // Let's check if it looks like code
+        // Check if it looks like code or HTML/SVG
         if (content.contains("import ") || content.contains("library(") ||
-            content.contains("plt.") || content.contains("ggplot")) {
+            content.contains("plt.") || content.contains("ggplot") ||
+            content.contains("<svg") || content.contains("<html") ||
+            content.contains("<!DOCTYPE")) {
             code = content;
         } else {
             emit errorOccurred(tr("Could not extract code from the AI response.\n\nResponse:\n%1")

@@ -32,7 +32,6 @@ private:
     QLineEdit* m_modelEdit;
     QLineEdit* m_pythonPathEdit;
     QLineEdit* m_rPathEdit;
-    QComboBox* m_languageCombo;
     QPushButton* m_testBtn;
     QPushButton* m_saveBtn;
     QPushButton* m_cancelBtn;
