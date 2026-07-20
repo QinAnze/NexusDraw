@@ -27,6 +27,9 @@ public:
     /// Cancel the current request if one is in-flight
     void cancelRequest();
 
+    /// Send a request to fix broken code
+    void fixCode(const QString& brokenCode, const QString& error, const QString& language);
+
     /// Returns true if a request is currently in progress
     bool isBusy() const;
 

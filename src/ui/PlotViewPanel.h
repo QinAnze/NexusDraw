@@ -21,6 +21,7 @@ public:
 
 signals:
     void exportRequested(const QString& imagePath);
+    void favoriteRequested(const QString& imagePath);
     void plotLoaded(bool success);
 
 private slots:

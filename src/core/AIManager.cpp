@@ -103,6 +103,46 @@ void AIManager::sendRequest(const QString& userMessage, const QJsonObject& datas
     m_activeReply = m_networkManager->post(request, doc.toJson());
 }
 
+void AIManager::fixCode(const QString& brokenCode, const QString& error, const QString& language)
+{
+    if (isBusy()) return;
+
+    const AppConfig& cfg = AppConfig::instance();
+    m_expectedLanguage = language;
+
+    // Build a fix-it prompt demanding complete code
+    QString prompt = QString(
+        "The following %1 code failed. Return the COMPLETE fixed code (not just the fix).\n\n"
+        "Error:\n%2\n\n"
+        "Broken code:\n```%1\n%3\n```\n\n"
+        "CRITICAL: Return ONLY the complete corrected code in a ```%1 block.\n"
+        "Do NOT explain the fix. Do NOT return a diff or partial code. "
+        "The code MUST be complete and runnable.\n"
+    ).arg(language, error, brokenCode);
+
+    QJsonArray messages;
+    QJsonObject userMsg;
+    userMsg["role"] = QString("user");
+    userMsg["content"] = prompt;
+    messages.append(userMsg);
+
+    QJsonObject body;
+    body["model"] = cfg.aiModel();
+    body["messages"] = messages;
+    body["temperature"] = 0.1;
+    body["max_tokens"] = 4096;
+
+    QJsonDocument doc(body);
+    QString apiUrl = buildApiUrl(cfg.aiBaseURL());
+    QUrl url(apiUrl);
+    QNetworkRequest request{url};
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    request.setRawHeader("Authorization", QString("Bearer %1").arg(cfg.aiApiKey()).toUtf8());
+    request.setTransferTimeout(120000);
+
+    m_activeReply = m_networkManager->post(request, doc.toJson());
+}
+
 void AIManager::cancelRequest()
 {
     if (m_activeReply) {

@@ -9,6 +9,7 @@
 #include <QPixmap>
 #include <QStandardPaths>
 #include <QDir>
+#include <QBuffer>
 
 ExportDialog::ExportDialog(const QString& sourceImagePath, QWidget* parent)
     : QDialog(parent), m_sourcePath(sourceImagePath)
@@ -38,6 +39,7 @@ void ExportDialog::setupUI()
     m_formatCombo->addItem("PNG (*.png)", "png");
     m_formatCombo->addItem("JPEG (*.jpg)", "jpg");
     m_formatCombo->addItem("BMP (*.bmp)", "bmp");
+    m_formatCombo->addItem("SVG (*.svg)", "svg");
     m_formatCombo->setMinimumHeight(30);
     connect(m_formatCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &ExportDialog::onFormatChanged);
@@ -136,14 +138,39 @@ void ExportDialog::onExport()
     else if (th > 0)
         toSave = src.scaledToHeight(th, Qt::SmoothTransformation);
 
-    int quality = (fmt == "jpg" || fmt == "jpeg") ? 95 : -1;
-    if (toSave.save(dest, nullptr, quality)) {
+    bool success = false;
+    if (fmt == "svg") {
+        // Embed PNG as base64 in SVG wrapper
+        QByteArray pngData;
+        QBuffer buffer(&pngData);
+        buffer.open(QIODevice::WriteOnly);
+        toSave.save(&buffer, "PNG");
+        buffer.close();
+        QString b64 = QString::fromLatin1(pngData.toBase64());
+        QString svg = QString(
+            "<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" "
+            "width=\"%1\" height=\"%2\" viewBox=\"0 0 %1 %2\">\n"
+            "<image width=\"%1\" height=\"%2\" xlink:href=\"data:image/png;base64,%3\"/>\n"
+            "</svg>\n"
+        ).arg(toSave.width()).arg(toSave.height()).arg(b64);
+        QFile f(dest);
+        if (f.open(QIODevice::WriteOnly)) {
+            f.write(svg.toUtf8());
+            f.close();
+            success = true;
+        }
+    } else {
+        int quality = (fmt == "jpg" || fmt == "jpeg") ? 95 : -1;
+        success = toSave.save(dest, nullptr, quality);
+    }
+
+    if (success) {
         QMessageBox::information(this, QString::fromUtf8("成功"),
-            QString::fromUtf8("图表已成功导出到:\n%1").arg(dest));
+            QString::fromUtf8("图表已导出到:\n%1").arg(dest));
         accept();
     } else {
         QMessageBox::critical(this, QString::fromUtf8("导出失败"),
-            QString::fromUtf8("保存图像失败，请检查文件权限和路径。"));
+            QString::fromUtf8("保存失败，请检查文件权限和路径。"));
     }
 }
 

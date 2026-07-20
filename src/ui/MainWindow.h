@@ -13,6 +13,7 @@ class DataPreviewPanel;
 class CodeViewPanel;
 class PlotViewPanel;
 class TerminalPanel;
+class FavoritesPanel;
 class DataManager;
 class AIManager;
 class CodeExecutor;
@@ -56,6 +57,7 @@ private:
     CodeViewPanel* m_codeViewPanel;
     PlotViewPanel* m_plotViewPanel;
     TerminalPanel* m_terminalPanel;
+    FavoritesPanel* m_favoritesPanel;
 
     // 布局
     QSplitter* m_mainSplitter;
@@ -77,4 +79,5 @@ private:
     // 状态
     QString m_currentLanguage;
     bool m_isPlotMode = true;
+    int m_retryCount = 0;
 };

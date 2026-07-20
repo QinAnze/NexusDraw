@@ -32,6 +32,7 @@ set(SOURCES
     src/ui/PlotViewPanel.cpp
     src/ui/ExportDialog.cpp
     src/ui/TerminalPanel.cpp
+    src/ui/FavoritesPanel.cpp
 )
 
 set(HEADERS
@@ -47,6 +48,7 @@ set(HEADERS
     src/ui/PlotViewPanel.h
     src/ui/ExportDialog.h
     src/ui/TerminalPanel.h
+    src/ui/FavoritesPanel.h
 )
 
 set(RESOURCES

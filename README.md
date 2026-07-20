@@ -6,6 +6,15 @@
 
 <p align="center">AI 驱动的数据科学可视化平台</p>
 
+<p align="center">
+  <img src="https://img.shields.io/badge/platform-Windows%20x64-lightgrey">
+  <img src="https://img.shields.io/badge/Qt-6.11-green">
+  <img src="https://img.shields.io/badge/C%2B%2B-17-blue">
+  <img src="https://img.shields.io/badge/Python-3.13-yellow">
+  <img src="https://img.shields.io/badge/R-4.6.1-blueviolet">
+  <img src="https://img.shields.io/badge/license-MIT-brightgreen">
+</p>
+
 ---
 
 ## 简介

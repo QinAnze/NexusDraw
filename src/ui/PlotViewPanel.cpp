@@ -42,9 +42,16 @@ void PlotViewPanel::setupUI() {
 
     m_exportBtn = new QPushButton(QString::fromUtf8("导出"));
     m_exportBtn->setFixedHeight(26);
-    // Uses global QSS
     connect(m_exportBtn, &QPushButton::clicked, this, &PlotViewPanel::onExport);
     headerLayout->addWidget(m_exportBtn);
+
+    auto* favBtn = new QPushButton(QString::fromUtf8("收藏"));
+    favBtn->setFixedHeight(26);
+    connect(favBtn, &QPushButton::clicked, this, [this]() {
+        if (m_hasPlot && !m_imagePath.isEmpty())
+            emit favoriteRequested(m_imagePath);
+    });
+    headerLayout->addWidget(favBtn);
     mainLayout->addLayout(headerLayout);
 
     m_scene = new QGraphicsScene(this);

@@ -4,6 +4,7 @@
 #include "CodeViewPanel.h"
 #include "PlotViewPanel.h"
 #include "TerminalPanel.h"
+#include "FavoritesPanel.h"
 #include "AIConfigDialog.h"
 #include "ExportDialog.h"
 #include "core/DataManager.h"
@@ -18,6 +19,9 @@
 #include <QDir>
 #include <QDateTime>
 #include <QTimer>
+#include <QFileDialog>
+#include <QFileInfo>
+#include <QStandardPaths>
 
 static QIcon svgIcon(const QString& name) {
     return QIcon(QString(":/icons/%1.svg").arg(name));
@@ -51,9 +55,13 @@ void MainWindow::setupUI()
     m_codeViewPanel = new CodeViewPanel;
     m_plotViewPanel = new PlotViewPanel;
     m_rightSplitter->addWidget(m_codeViewPanel);
+    m_favoritesPanel = new FavoritesPanel;
     m_rightSplitter->addWidget(m_plotViewPanel);
+    m_rightSplitter->addWidget(m_favoritesPanel);
+    m_favoritesPanel->setVisible(false);
     m_rightSplitter->setStretchFactor(0, 2);
-    m_rightSplitter->setStretchFactor(1, 3);
+    m_rightSplitter->setStretchFactor(1, 2);
+    m_rightSplitter->setStretchFactor(2, 1);
 
     m_leftSplitter = new QSplitter(Qt::Vertical);
     m_chatPanel = new ChatPanel;
@@ -174,10 +182,12 @@ void MainWindow::setupConnections()
     connect(m_codeViewPanel, &CodeViewPanel::runRequested, this, &MainWindow::onRunCode);
     connect(m_codeViewPanel, &CodeViewPanel::stopRequested, this, [this]() {
         m_codeExecutor->cancel();
+        m_aiManager->cancelRequest();
+        m_retryCount = 0;
         m_codeViewPanel->setRunEnabled(true);
         m_codeViewPanel->setStopEnabled(false);
         setWorkflowEnabled(true);
-        m_statusLabel->setText(QString::fromUtf8("执行已停止"));
+        m_statusLabel->setText(QString::fromUtf8("已停止"));
     });
     // Executor -> Plot
     connect(m_codeExecutor, &CodeExecutor::executionFinished, this, &MainWindow::onExecutionFinished);
@@ -185,8 +195,14 @@ void MainWindow::setupConnections()
     connect(m_codeExecutor, &CodeExecutor::statusMessage, this, &MainWindow::onAIStatus);
     // Data Preview -> Upload
     connect(m_dataPreviewPanel, &DataPreviewPanel::uploadRequested, this, &MainWindow::onUploadDataset);
-    // Plot -> Export
+    // Plot -> Export / Favorite
     connect(m_plotViewPanel, &PlotViewPanel::exportRequested, this, &MainWindow::onExportPlot);
+    connect(m_plotViewPanel, &PlotViewPanel::favoriteRequested, this, [this](const QString& path) {
+        m_favoritesPanel->addFavorite(path);
+        m_favoritesPanel->setVisible(true);
+        logToTerminal(QString::fromUtf8("已收藏: %1").arg(path));
+    });
+
     // Data Manager
     connect(m_dataManager, &DataManager::dataLoaded, this, [this](int rows, int cols) {
         m_dataPreviewPanel->loadFromDataManager(m_dataManager);
@@ -369,21 +385,49 @@ void MainWindow::onExecutionFinished(const QString& imagePath, const QString& /*
 
 void MainWindow::onExecutionError(const QString& error, const QString& stdErr)
 {
-    m_codeViewPanel->setRunEnabled(true);
-    m_runAction->setEnabled(true);
     setWorkflowEnabled(true);
-    m_statusLabel->setText(QString::fromUtf8("执行失败"));
-    logToTerminal(QString::fromUtf8("执行错误: %1").arg(error));
+    m_statusLabel->setText(QString::fromUtf8("执行出错"));
+    logToTerminal(QString::fromUtf8("错误: %1").arg(error));
     m_terminalPanel->appendError(error);
 
-    QMessageBox msgBox(this);
-    msgBox.setIcon(QMessageBox::Warning);
-    msgBox.setWindowTitle(QString::fromUtf8("执行错误"));
-    msgBox.setText(QString::fromUtf8("代码执行失败。"));
-    msgBox.setDetailedText(
-        QString::fromUtf8("错误:\n%1\n\nStderr:\n%2").arg(error, stdErr));
-    msgBox.setStandardButtons(QMessageBox::Ok);
-    msgBox.exec();
+    QString combined = error + "\n" + stdErr;
+    bool isEnvError = combined.contains("ModuleNotFoundError") ||
+                      combined.contains("No module named") ||
+                      combined.contains("there is no package called");
+    bool isDataError = combined.contains("FileNotFoundError") ||
+                       combined.contains("No such file") ||
+                       combined.contains("cannot open") ||
+                       (combined.contains("KeyError") && combined.contains("DATASET_PATH"));
+
+    if (isEnvError) {
+        QString msg = QString::fromUtf8("环境配置问题：缺少必要的库。\n%1").arg(error);
+        m_chatPanel->addSystemMessage(msg);
+        m_codeViewPanel->setRunEnabled(true);
+        m_runAction->setEnabled(true);
+        return;
+    }
+    if (isDataError) {
+        QString msg = QString::fromUtf8("数据集问题，请检查数据格式。\n%1").arg(error);
+        m_chatPanel->addSystemMessage(msg);
+        m_codeViewPanel->setRunEnabled(true);
+        m_runAction->setEnabled(true);
+        return;
+    }
+
+    // Code error — AI auto-fix up to 3 times
+    m_retryCount++;
+    if (m_retryCount <= 3) {
+        m_chatPanel->addSystemMessage(
+            QString::fromUtf8("代码报错，AI 正在修复 (第 %1/3 次)...").arg(m_retryCount));
+        m_statusLabel->setText(QString::fromUtf8("AI 修复中..."));
+        m_aiManager->fixCode(m_codeViewPanel->code(), combined, m_currentLanguage);
+    } else {
+        m_chatPanel->addSystemMessage(
+            QString::fromUtf8("AI 修复 3 次后仍失败，请手动修改代码。"));
+        m_codeViewPanel->setRunEnabled(true);
+        m_runAction->setEnabled(true);
+        m_retryCount = 0;
+    }
 }
 
 void MainWindow::onExportPlot(const QString& imagePath)

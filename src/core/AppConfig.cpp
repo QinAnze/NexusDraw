@@ -4,6 +4,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QFile>
+#include <QMap>
 #include <QCryptographicHash>
 #include <QStandardPaths>
 #include <QSysInfo>
@@ -227,16 +228,53 @@ QString AppConfig::buildSystemPrompt(const QJsonObject& datasetInfo, const QStri
     prompt += langSkill;
     prompt += "\n\n";
 
-    // Color scheme (if selected)
+    // Color scheme — all palettes standardized to hex codes
+    QMap<QString, QStringList> palettes;
+    palettes["viridis"]    = {"#440154","#482878","#3E4989","#31688E","#26828E","#1F9E89","#35B779","#6ECE58","#B5DE2B","#FDE725"};
+    palettes["plasma"]     = {"#0D0887","#46039F","#7201A8","#9C179E","#BD3786","#D8576B","#ED7953","#FB9F3A","#FDCA26","#F0F921"};
+    palettes["inferno"]    = {"#000004","#1B0C41","#4A0C6B","#781C6D","#A52C60","#CF4446","#ED6925","#FB9B06","#F7D13D","#FCFFA4"};
+    palettes["magma"]      = {"#000004","#180F3D","#440F76","#721F81","#9E2F7F","#CD4071","#F1605D","#FD9567","#FECA8D","#FCFDBF"};
+    palettes["cividis"]    = {"#00224E","#123570","#3B496C","#575D6D","#707173","#8A8678","#A59C74","#C3B369","#E1CC55","#FFE838"};
+    palettes["deep"]       = {"#4C72B0","#DD8452","#55A868","#C44E52","#8172B3","#937860","#DA8BC3","#8C8C8C","#CCB974","#64B5CD"};
+    palettes["muted"]      = {"#4878D0","#EE854A","#6ACC64","#D65F5F","#956CB4","#8C613C","#DC7EC0","#797979","#D5BB67","#82C6E2"};
+    palettes["colorblind"] = {"#0173B2","#DE8F05","#029E73","#D55E00","#CC78BC","#CA9161","#FBAFE4","#949494","#ECE133","#56B4E9"};
+    palettes["bright"]     = {"#023EFF","#FF7C00","#1AC938","#E8000B","#8B2BE2","#9F4800","#F14CC1","#A3A3A3","#FFC400","#00D7FF"};
+    palettes["dark"]       = {"#001C7F","#B1400D","#12711C","#8C0800","#591E71","#592F0D","#A23582","#3C3C3C","#B8850A","#006374"};
+    palettes["Set1"]       = {"#E41A1C","#377EB8","#4DAF4A","#984EA3","#FF7F00","#FFFF33","#A65628","#F781BF","#999999"};
+    palettes["Set2"]       = {"#66C2A5","#FC8D62","#8DA0CB","#E78AC3","#A6D854","#FFD92F","#E5C494","#B3B3B3"};
+    palettes["Set3"]       = {"#8DD3C7","#FFFFB3","#BEBADA","#FB8072","#80B1D3","#FDB462","#B3DE69","#FCCDE5","#D9D9D9","#BC80BD","#CCEBC5","#FFED6F"};
+    palettes["ggplot2"]    = {"#F8766D","#7CAE00","#00BFC4","#C77CFF"};  // ggplot2 default
+    palettes["okabe-ito"]  = {"#000000","#E69F00","#56B4E9","#009E73","#F0E442","#0072B2","#D55E00","#CC79A7"};
+    palettes["nature"]     = {"#2D6A4F","#40916C","#52B788","#74C69D","#95D5B2","#B7E4C7","#D8F3DC","#081C15","#1B4332"};
+    palettes["bio"]        = {"#1B9E77","#D95F02","#7570B3","#E7298A","#66A61E","#E6AB02","#A6761D","#666666"};
+    palettes["finance"]    = {"#003F5C","#2F4B7C","#665191","#A05195","#D45087","#F95D6A","#FF7C43","#FFA600"};
+    palettes["BWR"]        = {"#053061","#2166AC","#4393C3","#92C5DE","#D1E5F0","#F7F7F7","#FDDBC7","#F4A582","#D6604D","#B2182B","#67001F"};
+    palettes["BWR2"]       = {"#0000FF","#4444FF","#8888FF","#CCCCFF","#FFFFFF","#FFCCCC","#FF8888","#FF4444","#FF0000"};
+
     QString colorScheme = datasetInfo["colorScheme"].toString();
-    if (!colorScheme.isEmpty()) {
-        QString colorPath = QString(":/skills/colors/%1.md").arg(colorScheme);
-        QFile colorFile(colorPath);
-        if (colorFile.open(QFile::ReadOnly | QFile::Text)) {
-            prompt += QString::fromUtf8(colorFile.readAll());
-            prompt += "\n\n";
-            colorFile.close();
+    if (colorScheme == "auto") {
+        prompt += "## Color Palette\nPick the best palette for this data. Use hex codes directly (NOT named palettes like 'viridis'):\n";
+        for (auto it = palettes.begin(); it != palettes.end(); ++it) {
+            prompt += QString("- %1: %2\n").arg(it.key(), it.value().join(", "));
         }
+        if (language == "python") {
+            prompt += "\nApply: palette = ['#hex1','#hex2',...]; sns.set_palette(palette)\n";
+        } else {
+            prompt += "\nApply: scale_color_manual(values=c('#hex1','#hex2',...))\n";
+        }
+        prompt += "Do NOT use scale_color_viridis() or any named palette function. Use hex codes only.\n\n";
+    } else if (palettes.contains(colorScheme)) {
+        const QStringList& hex = palettes[colorScheme];
+        prompt += QString("## Color Palette — %1\nHex codes: %2\n").arg(colorScheme, hex.join(", "));
+        QStringList quoted;
+        for (const QString& c : hex) quoted.append("'" + c + "'");
+        if (language == "python") {
+            prompt += "Apply: custom_palette = [" + quoted.join(",") + "]\n";
+            prompt += "  sns.set_palette(custom_palette) or plt.rcParams['axes.prop_cycle'] = plt.cycler(color=custom_palette)\n";
+        } else {
+            prompt += "Apply: scale_color_manual(values=c(" + quoted.join(",") + "))\n";
+        }
+        prompt += "Use these exact hex codes. Do NOT use named palette functions.\n\n";
     }
 
     // Dataset context

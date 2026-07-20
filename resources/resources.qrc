@@ -1,6 +1,7 @@
 <RCC>
     <qresource prefix="/">
         <file>logo.png</file>
+        <file>NEXUS.md</file>
         <file>style.qss</file>
         <file>icons/upload.svg</file>
         <file>icons/settings.svg</file>
